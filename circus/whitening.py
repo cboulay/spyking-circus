@@ -301,6 +301,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     safety_time = params.getint('whitening', 'safety_time')
     max_elts_elec = params.getint('whitening', 'max_elts')
     output_dim = params.getfloat('whitening', 'output_dim')
+    ignore_saturation = params.getboolean('detection', 'ignore_saturation')
     inv_nodes = numpy.zeros(N_total, dtype=numpy.int32)
     inv_nodes[nodes] = numpy.arange(len(nodes))
     smoothing_factor = params.getfloat('detection', 'smoothing_factor')
@@ -312,6 +313,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     if ignore_dead_times:
         all_dead_times = get_dead_times(params)
     data_file.open()
+
     #################################################################
 
     if comm.rank == 0:
@@ -350,6 +352,10 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     thresholds = io.load_data(params, 'thresholds')
     mads = io.load_data(params, 'mads')
     stds = io.load_data(params, 'stds')
+
+    if ignore_saturation:
+        sat_thresh = params.getfloat('detection', 'sat_thresh') * mads
+
 
     if alignment:
         cdata = numpy.linspace(-jitter_range, +jitter_range, nb_jitter)
@@ -393,6 +399,9 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
                     local_chunk = numpy.dot(local_chunk, spatial_whitening)
             if do_temporal_whitening:
                 local_chunk = scipy.ndimage.filters.convolve1d(local_chunk, temporal_whitening, axis=0, mode='constant')
+
+            if ignore_saturation:
+                local_chunk[local_chunk > sat_thresh] = 0
 
             local_borders = (snippet_duration, local_shape - snippet_duration)
 

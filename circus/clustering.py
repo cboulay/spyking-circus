@@ -33,6 +33,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     nb_jitter = params.getint('detection', 'nb_jitter')
     matched_filter = params.getboolean('detection', 'matched-filter')
     _ = params.getfloat('detection', 'spike_thresh')
+    ignore_saturation = params.getboolean('detection', 'ignore_saturation')
     spike_width = params.getfloat('detection', 'spike_width')
     noise_thresh = params.getfloat('clustering', 'noise_thr')
     if params.getboolean('data', 'global_tmp'):
@@ -102,6 +103,9 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
 
     mads = io.load_data(params, 'mads')
     stds = io.load_data(params, 'stds')
+
+    if ignore_saturation:
+        sat_thresh = params.getfloat('detection', 'sat_thresh') * mads
 
     if rejection_threshold > 0:
         reject_noise = True
@@ -426,6 +430,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
             if elt_count < loop_nb_elts:
                 # print "Node", comm.rank, "is analyzing chunk", gidx, "/", nb_chunks, " ..."
                 local_chunk, t_offset = data_file.get_data(gidx, chunk_size, padding, nodes=nodes)
+
                 local_shape = len(local_chunk)
                 if do_spatial_whitening:
                     if use_gpu:
@@ -437,6 +442,9 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
                     local_chunk = scipy.ndimage.filters.convolve1d(
                         local_chunk, temporal_whitening, axis=0, mode='constant'
                     )
+
+                if ignore_saturation:
+                    local_chunk[local_chunk > sat_thresh] = 0
 
                 # Extracting the peaks.
                 found_peaktimes = []

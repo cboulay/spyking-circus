@@ -29,6 +29,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     # dist_peaks = params.getint('detection', 'dist_peaks')
     do_temporal_whitening = params.getboolean('whitening', 'temporal')
     do_spatial_whitening = params.getboolean('whitening', 'spatial')
+    ignore_saturation = params.getboolean('detection', 'ignore_saturation')
     templates_normalization = params.getboolean('clustering', 'templates_normalization')  # TODO test, switch, test!
     chunk_size = detect_memory(params, fitting=True)
     gpu_only = params.getboolean('fitting', 'gpu_only')
@@ -57,6 +58,10 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     inv_nodes[nodes] = numpy.arange(len(nodes))
     data_file.open()
     #################################################################
+
+    if ignore_saturation:
+        mads = io.load_data(params, 'mads')
+        sat_thresh = params.getfloat('detection', 'sat_thresh') * mads
 
     if use_gpu:
         import cudamat as cmt
@@ -310,6 +315,9 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
                 local_chunk = numpy.dot(local_chunk, spatial_whitening)
         if do_temporal_whitening:
             local_chunk = scipy.ndimage.filters.convolve1d(local_chunk, temporal_whitening, axis=0, mode='constant')
+
+        if ignore_saturation:
+            local_chunk[local_chunk > sat_thresh] = 0
 
         # Extracting peaks.
 

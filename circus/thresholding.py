@@ -23,6 +23,7 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
     sign_peaks = params.get('detection', 'peaks')
     dist_peaks = params.getint('detection', 'dist_peaks')
     matched_filter = params.getboolean('detection', 'matched-filter')
+    ignore_saturation = params.getboolean('detection', 'ignore_saturation')
     spike_thresh = params.getfloat('detection', 'spike_thresh')
     spike_width = params.getfloat('detection', 'spike_width')
     do_temporal_whitening = params.getboolean('whitening', 'temporal')
@@ -66,6 +67,10 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
 
     if ignore_dead_times:
         all_dead_times = get_dead_times(params)
+
+    if ignore_saturation:
+        mads = io.load_data(params, 'mads')
+        sat_thresh = params.getfloat('detection', 'sat_thresh') * mads
 
     thresholds = io.load_data(params, 'thresholds')
 
@@ -133,6 +138,9 @@ def main(params, nb_cpu, nb_gpu, use_gpu):
                 local_chunk = numpy.dot(local_chunk, spatial_whitening)
         if do_temporal_whitening:
             local_chunk = scipy.ndimage.filters.convolve1d(local_chunk, temporal_whitening, axis=0, mode='constant')
+
+        if ignore_saturation:
+            local_chunk[local_chunk > sat_thresh] = 0
 
         # print "Extracting the peaks..."
 

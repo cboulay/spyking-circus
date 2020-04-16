@@ -112,6 +112,8 @@ class CircusParser(object):
                           ['detection', 'isolation', 'bool', 'True'],
                           ['detection', 'dead_channels', 'string', ''],
                           ['detection', 'spike_width', 'float', '0'],
+                          ['detection', 'ignore_saturation', 'bool', 'False'],
+                          ['detection', 'sat_thresh', 'float', '100'],
                           ['triggers', 'clean_artefact', 'bool', 'False'],
                           ['triggers', 'make_plots', 'string', ''],
                           ['triggers', 'trig_file', 'string', ''],
